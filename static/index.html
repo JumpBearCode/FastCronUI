@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastCronUI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+        <h1 class="text-xl font-bold tracking-tight">
+            <span class="text-blue-400">Fast</span>CronUI
+        </h1>
+        <nav class="flex gap-2">
+            <button id="tab-monitor" onclick="switchTab('monitor')"
+                class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                Monitor
+            </button>
+            <button id="tab-create" onclick="switchTab('create')"
+                class="tab-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                + New Job
+            </button>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-6">
+        <!-- Monitor Page -->
+        <section id="page-monitor" class="page">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-300">Scheduled Jobs</h2>
+                <span id="refresh-indicator" class="text-xs text-gray-500">Auto-refresh: 10s</span>
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-gray-800">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-900 text-gray-400 text-left">
+                        <tr>
+                            <th class="px-4 py-3 font-medium">Job Name</th>
+                            <th class="px-4 py-3 font-medium">Script</th>
+                            <th class="px-4 py-3 font-medium">Schedule</th>
+                            <th class="px-4 py-3 font-medium">Status</th>
+                            <th class="px-4 py-3 font-medium">Last Run</th>
+                            <th class="px-4 py-3 font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="job-table-body" class="divide-y divide-gray-800">
+                    </tbody>
+                </table>
+            </div>
+            <p id="no-jobs" class="hidden text-center text-gray-500 py-12">
+                No jobs yet. Create one to get started.
+            </p>
+
+            <!-- Run History Panel -->
+            <div id="run-history-panel" class="hidden mt-6">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-md font-semibold text-gray-300">
+                        Run History: <span id="rh-job-name" class="text-blue-400"></span>
+                    </h3>
+                    <button onclick="closeRunHistory()" class="text-gray-500 hover:text-gray-300 text-sm">Close</button>
+                </div>
+                <div class="overflow-x-auto rounded-xl border border-gray-800">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-900 text-gray-400 text-left">
+                            <tr>
+                                <th class="px-4 py-3 font-medium">Run ID</th>
+                                <th class="px-4 py-3 font-medium">Status</th>
+                                <th class="px-4 py-3 font-medium">Trigger</th>
+                                <th class="px-4 py-3 font-medium">Started</th>
+                                <th class="px-4 py-3 font-medium">Duration</th>
+                                <th class="px-4 py-3 font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="run-table-body" class="divide-y divide-gray-800"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Create/Edit Job Page -->
+        <section id="page-create" class="page hidden">
+            <h2 id="form-title" class="text-lg font-semibold text-gray-300 mb-6">Create New Job</h2>
+            <form id="job-form" class="space-y-5 max-w-xl" onsubmit="submitJob(event)">
+                <input type="hidden" id="edit-job-id">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Job Name</label>
+                    <input id="f-name" type="text" required
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Script Path</label>
+                    <div class="flex gap-2">
+                        <input id="f-script" type="text" required
+                            class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 focus:outline-none">
+                        <button type="button" onclick="openBrowser()"
+                            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm transition-colors">Browse</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Frequency</label>
+                    <select id="f-frequency" onchange="updateScheduleFields()"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:border-blue-500 focus:outline-none">
+                        <option value="hourly">Hourly</option>
+                        <option value="daily" selected>Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                    </select>
+                </div>
+
+                <!-- Hourly options -->
+                <div id="sched-hourly" class="hidden">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Every</label>
+                    <select id="f-interval"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100">
+                        <option value="5">5 minutes</option>
+                        <option value="10">10 minutes</option>
+                        <option value="15">15 minutes</option>
+                        <option value="20">20 minutes</option>
+                        <option value="30" selected>30 minutes</option>
+                    </select>
+                </div>
+
+                <!-- Time fields -->
+                <div id="sched-time" class="flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Hour</label>
+                        <input id="f-hour" type="number" min="0" max="23" value="9"
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Minute</label>
+                        <input id="f-minute" type="number" min="0" max="59" value="0"
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100">
+                    </div>
+                </div>
+
+                <!-- Weekly: day of week -->
+                <div id="sched-dow" class="hidden">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Day of Week</label>
+                    <select id="f-dow"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100">
+                        <option value="0">Sunday</option>
+                        <option value="1" selected>Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                    </select>
+                </div>
+
+                <!-- Monthly: day of month -->
+                <div id="sched-dom" class="hidden">
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Day of Month</label>
+                    <input id="f-dom" type="number" min="1" max="28" value="1"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Timeout (seconds)</label>
+                    <input id="f-timeout" type="number" min="60" value="3600"
+                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100">
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button type="submit"
+                        class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors">
+                        Save Job
+                    </button>
+                    <button type="button" onclick="cancelEdit()"
+                        class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <!-- Log Viewer Modal -->
+    <div id="log-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
+        <div class="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-4xl max-h-[80vh] flex flex-col">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+                <h3 class="text-sm font-medium text-gray-300">Log: <span id="log-run-id" class="text-blue-400"></span></h3>
+                <button onclick="closeLogModal()" class="text-gray-500 hover:text-gray-300">&times;</button>
+            </div>
+            <pre id="log-content" class="log-viewer flex-1 overflow-auto p-4 text-xs leading-relaxed"></pre>
+        </div>
+    </div>
+
+    <!-- File Browser Modal -->
+    <div id="browser-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
+        <div class="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-lg max-h-[70vh] flex flex-col">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+                <h3 class="text-sm font-medium text-gray-300">Select Script</h3>
+                <button onclick="closeBrowser()" class="text-gray-500 hover:text-gray-300">&times;</button>
+            </div>
+            <div id="browser-breadcrumb" class="px-4 py-2 text-xs text-gray-400 border-b border-gray-800"></div>
+            <div id="browser-list" class="flex-1 overflow-auto p-2"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

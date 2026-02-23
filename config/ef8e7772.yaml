@@ -1,0 +1,12 @@
+enabled: true
+id: ef8e7772
+name: tesla
+schedule:
+  day_of_month: null
+  day_of_week: null
+  frequency: hourly
+  hour: 0
+  interval: 30
+  minute: 0
+script_path: /Users/wqeq/Desktop/project/TeslaWebscrape/start.sh
+timeout_seconds: 3600
