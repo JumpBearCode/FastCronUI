@@ -1,33 +1,98 @@
 /* Tab buttons */
 .tab-btn {
-    color: #9ca3af;
+    color: #6b7280;
     background: transparent;
 }
 .tab-btn:hover {
-    color: #e5e7eb;
-    background: rgba(255,255,255,0.05);
+    color: #111827;
+    background: #f3f4f6;
 }
 .tab-btn.active {
-    color: #60a5fa;
-    background: rgba(96,165,250,0.1);
+    color: #2563eb;
+    background: #eff6ff;
 }
 
-/* Status badges */
+/* Sub-tab buttons (underline style like Databricks) */
+.subtab-btn {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.subtab-btn:hover {
+    color: #111827;
+}
+.subtab-btn.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+/* Detail page sub-tabs */
+.detail-subtab-btn {
+    padding: 6px 14px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.detail-subtab-btn:hover {
+    color: #111827;
+}
+.detail-subtab-btn.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+/* Filter chips (Databricks style) */
+.filter-chip {
+    padding: 4px 14px;
+    border-radius: 9999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6b7280;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.filter-chip:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+.filter-chip.active {
+    color: #2563eb;
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+/* Status badges — light backgrounds */
 .badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     padding: 2px 10px;
     border-radius: 9999px;
     font-size: 0.75rem;
     font-weight: 500;
     text-transform: capitalize;
 }
-.badge-success  { background: #065f46; color: #6ee7b7; }
-.badge-failed   { background: #7f1d1d; color: #fca5a5; }
-.badge-running  { background: #78350f; color: #fcd34d; }
-.badge-timeout  { background: #831843; color: #f9a8d4; }
-.badge-none     { background: #374151; color: #9ca3af; }
+.badge-success  { background: #dcfce7; color: #166534; }
+.badge-failed   { background: #fee2e2; color: #991b1b; }
+.badge-running  { background: #dbeafe; color: #1e40af; }
+.badge-timeout  { background: #fef9c3; color: #854d0e; }
+.badge-cancelled { background: #ffedd5; color: #9a3412; }
+.badge-none     { background: #f3f4f6; color: #6b7280; }
 
-/* Log viewer terminal style */
+/* Log viewer terminal style (keep dark) */
 .log-viewer {
     background: #0a0a0a;
     color: #4ade80;
@@ -48,34 +113,84 @@
     transition: background 0.15s;
 }
 .browser-item:hover {
-    background: rgba(255,255,255,0.05);
+    background: #f3f4f6;
 }
 .browser-item .icon {
     width: 20px;
     text-align: center;
     color: #9ca3af;
 }
-.browser-item.dir .icon { color: #60a5fa; }
-.browser-item.file .icon { color: #4ade80; }
+.browser-item.dir .icon { color: #2563eb; }
+.browser-item.file .icon { color: #16a34a; }
 
-/* Action buttons */
+/* Action buttons — light style */
 .action-btn {
     padding: 4px 10px;
     border-radius: 6px;
     font-size: 0.75rem;
     font-weight: 500;
-    transition: background 0.15s;
+    transition: all 0.15s;
     cursor: pointer;
-    border: none;
+    border: 1px solid transparent;
 }
-.action-btn.run   { background: #065f46; color: #6ee7b7; }
-.action-btn.run:hover { background: #047857; }
-.action-btn.edit  { background: #1e3a5f; color: #93c5fd; }
-.action-btn.edit:hover { background: #1e40af; }
-.action-btn.del   { background: #7f1d1d; color: #fca5a5; }
-.action-btn.del:hover { background: #991b1b; }
+.action-btn.run   { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.action-btn.run:hover { background: #bbf7d0; }
+.action-btn.edit  { background: #dbeafe; color: #1e40af; border-color: #bfdbfe; }
+.action-btn.edit:hover { background: #bfdbfe; }
+.action-btn.del   { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+.action-btn.del:hover { background: #fecaca; }
+.action-btn.kill  { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
+.action-btn.kill:hover { background: #fed7aa; }
 
 /* Table row hover */
 #job-table-body tr:hover {
-    background: rgba(255,255,255,0.02);
+    background: #f9fafb;
+}
+
+/* Recent run dots */
+.run-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 3px;
+    cursor: default;
+}
+.run-dot.success { background: #22c55e; }
+.run-dot.failed  { background: #ef4444; }
+.run-dot.running { background: #3b82f6; }
+.run-dot.timeout { background: #eab308; }
+.run-dot.cancelled { background: #f97316; }
+
+/* Run chart bar hover */
+.run-bar {
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.run-bar:hover {
+    opacity: 0.8;
+}
+
+/* Job name link style */
+.job-link {
+    color: #2563eb;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+}
+.job-link:hover {
+    text-decoration: underline;
+}
+
+/* Breadcrumb */
+.breadcrumb a {
+    color: #2563eb;
+    text-decoration: none;
+}
+.breadcrumb a:hover {
+    text-decoration: underline;
+}
+.breadcrumb span.separator {
+    color: #9ca3af;
+    margin: 0 6px;
 }

@@ -13,6 +13,12 @@ from models import RunRecord, RunStatus, TriggerType
 LOGS_DIR = Path(__file__).parent / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
+# ── Process tracking ──────────────────────────────────────────
+# run_id -> Process
+_running: dict[str, asyncio.subprocess.Process] = {}
+# job_id -> set of run_ids
+_job_runs: dict[str, set[str]] = {}
+
 
 def _find_venv_python(script_path: str) -> str | None:
     """Walk up to 5 parent dirs from script looking for .venv/bin/python3."""
@@ -34,6 +40,32 @@ def _build_command(script_path: str) -> list[str]:
     return ["/bin/zsh", script_path]
 
 
+def _register(job_id: str, run_id: str, proc: asyncio.subprocess.Process):
+    _running[run_id] = proc
+    _job_runs.setdefault(job_id, set()).add(run_id)
+
+
+def _unregister(job_id: str, run_id: str):
+    _running.pop(run_id, None)
+    if job_id in _job_runs:
+        _job_runs[job_id].discard(run_id)
+        if not _job_runs[job_id]:
+            del _job_runs[job_id]
+
+
+async def kill_job(job_id: str) -> int:
+    """Kill all running processes for a job. Returns number of processes killed."""
+    run_ids = list(_job_runs.get(job_id, set()))
+    killed = 0
+    for run_id in run_ids:
+        proc = _running.get(run_id)
+        if proc and proc.returncode is None:
+            proc.kill()
+            killed += 1
+            # _execute will handle cleanup and db update via the exception path
+    return killed
+
+
 async def run_job(job_id: str, script_path: str, timeout_seconds: int,
                   trigger: TriggerType = TriggerType.scheduled) -> str:
     """Execute a script asynchronously. Returns run_id."""
@@ -50,11 +82,11 @@ async def run_job(job_id: str, script_path: str, timeout_seconds: int,
     )
     await db.insert_run(run)
 
-    asyncio.create_task(_execute(run_id, script_path, timeout_seconds, log_path))
+    asyncio.create_task(_execute(run_id, job_id, script_path, timeout_seconds, log_path))
     return run_id
 
 
-async def _execute(run_id: str, script_path: str, timeout_seconds: int, log_path: Path):
+async def _execute(run_id: str, job_id: str, script_path: str, timeout_seconds: int, log_path: Path):
     cmd = _build_command(script_path)
     env = os.environ.copy()
     work_dir = str(Path(script_path).resolve().parent)
@@ -68,6 +100,7 @@ async def _execute(run_id: str, script_path: str, timeout_seconds: int, log_path
                 cwd=work_dir,
                 env=env,
             )
+            _register(job_id, run_id, proc)
             try:
                 await asyncio.wait_for(proc.wait(), timeout=timeout_seconds)
             except asyncio.TimeoutError:
@@ -80,10 +113,19 @@ async def _execute(run_id: str, script_path: str, timeout_seconds: int, log_path
                 return
 
         exit_code = proc.returncode
-        status = RunStatus.success if exit_code == 0 else RunStatus.failed
-        await db.finish_run(run_id, status, exit_code=exit_code)
+        # returncode -9 means SIGKILL (from our kill_job)
+        if exit_code == -9:
+            with open(log_path, "a") as lf:
+                lf.write("\n[CRONUI] Process cancelled by user\n")
+            await db.finish_run(run_id, RunStatus.cancelled, exit_code=-9,
+                                error_msg="Cancelled by user")
+        else:
+            status = RunStatus.success if exit_code == 0 else RunStatus.failed
+            await db.finish_run(run_id, status, exit_code=exit_code)
 
     except Exception as exc:
         with open(log_path, "a") as lf:
             lf.write(f"\n[CRONUI] Execution error: {exc}\n")
         await db.finish_run(run_id, RunStatus.failed, exit_code=-1, error_msg=str(exc))
+    finally:
+        _unregister(job_id, run_id)

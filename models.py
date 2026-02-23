@@ -67,6 +67,7 @@ class RunStatus(str, Enum):
     success = "success"
     failed = "failed"
     timeout = "timeout"
+    cancelled = "cancelled"
 
 
 class TriggerType(str, Enum):
@@ -93,3 +94,19 @@ class JobWithStatus(BaseModel):
     last_status: Optional[RunStatus] = None
     last_run: Optional[datetime] = None
     next_run: Optional[str] = None
+
+
+class RecentRunSummary(BaseModel):
+    id: str
+    status: RunStatus
+    started_at: datetime
+    duration_ms: Optional[int] = None
+
+
+class JobWithRecentRuns(BaseModel):
+    """Job config + latest run info + recent runs for Workflows list."""
+    config: JobConfig
+    last_status: Optional[RunStatus] = None
+    last_run: Optional[datetime] = None
+    next_run: Optional[str] = None
+    recent_runs: list[RecentRunSummary] = []

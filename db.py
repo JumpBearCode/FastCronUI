@@ -5,7 +5,7 @@ from typing import Optional
 
 import asyncpg
 
-from models import RunRecord, RunStatus, TriggerType
+from models import RecentRunSummary, RunRecord, RunStatus, TriggerType
 
 DATABASE_URL = "postgresql://bearagent:Yuer0113@192.168.31.61:5432/fastcronui"
 
@@ -42,6 +42,29 @@ async def ensure_table():
         """)
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_job_id ON runs(job_id)")
         await conn.execute("CREATE INDEX IF NOT EXISTS idx_runs_started_at ON runs(started_at)")
+
+
+async def cleanup_stale_runs():
+    """Mark all orphaned 'running' records as failed on startup.
+
+    When the server restarts, any in-flight processes are lost but their
+    DB records still say 'running'. This fixes them.
+    """
+    now = datetime.now(timezone.utc)
+    async with _pool.acquire() as conn:
+        count = await conn.execute(
+            """UPDATE runs
+               SET status='failed', finished_at=$1,
+                   duration_ms = EXTRACT(EPOCH FROM ($1 - started_at))::int * 1000,
+                   exit_code=-1,
+                   error_msg='Server restarted while job was running'
+               WHERE status='running'""",
+            now,
+        )
+    # asyncpg returns "UPDATE N"
+    n = int(count.split()[-1]) if count else 0
+    if n:
+        print(f"[CRONUI] Cleaned up {n} stale running record(s)")
 
 
 async def insert_run(run: RunRecord):
@@ -93,6 +116,32 @@ async def get_run(run_id: str) -> Optional[RunRecord]:
     async with _pool.acquire() as conn:
         row = await conn.fetchrow("SELECT * FROM runs WHERE id=$1", run_id)
     return _row_to_record(row) if row else None
+
+
+async def get_recent_runs(job_id: str, limit: int = 10) -> list[RecentRunSummary]:
+    async with _pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT id, status, started_at, duration_ms FROM runs WHERE job_id=$1 ORDER BY started_at DESC LIMIT $2",
+            job_id, limit,
+        )
+    return [
+        RecentRunSummary(
+            id=r["id"],
+            status=RunStatus(r["status"]),
+            started_at=r["started_at"],
+            duration_ms=r["duration_ms"],
+        )
+        for r in rows
+    ]
+
+
+async def get_all_recent_runs(limit: int = 100) -> list[RunRecord]:
+    async with _pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM runs ORDER BY started_at DESC LIMIT $1",
+            limit,
+        )
+    return [_row_to_record(r) for r in rows]
 
 
 def _row_to_record(row: asyncpg.Record) -> RunRecord:

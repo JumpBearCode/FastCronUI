@@ -11,12 +11,12 @@ from fastapi.staticfiles import StaticFiles
 
 import db
 import scheduler
-from executor import run_job
+from executor import kill_job, run_job
 from models import (
     JobConfig,
     JobCreate,
     JobUpdate,
-    JobWithStatus,
+    JobWithRecentRuns,
     TriggerType,
 )
 
@@ -29,6 +29,7 @@ CONFIG_DIR.mkdir(exist_ok=True)
 async def lifespan(app: FastAPI):
     await db.init_pool()
     await db.ensure_table()
+    await db.cleanup_stale_runs()
     yield
     await db.close_pool()
 
@@ -65,16 +66,18 @@ def _all_jobs() -> list[JobConfig]:
 # ── API: Jobs ─────────────────────────────────────────────────
 
 @app.get("/api/jobs")
-async def list_jobs() -> list[JobWithStatus]:
+async def list_jobs() -> list[JobWithRecentRuns]:
     result = []
     for job in _all_jobs():
         latest = await db.get_latest_run(job.id)
+        recent = await db.get_recent_runs(job.id, limit=10)
         cron_expr = job.schedule.to_cron()
-        result.append(JobWithStatus(
+        result.append(JobWithRecentRuns(
             config=job,
             last_status=latest.status if latest else None,
             last_run=latest.started_at if latest else None,
             next_run=cron_expr,
+            recent_runs=recent,
         ))
     return result
 
@@ -124,9 +127,20 @@ async def trigger_run(job_id: str, request: Request):
     return {"run_id": run_id}
 
 
+@app.post("/api/jobs/{job_id}/kill")
+async def kill_job_runs(job_id: str):
+    killed = await kill_job(job_id)
+    return {"ok": True, "killed": killed}
+
+
 @app.get("/api/jobs/{job_id}/runs")
-async def get_runs(job_id: str):
-    return await db.get_runs_for_job(job_id)
+async def get_runs(job_id: str, limit: int = 50):
+    return await db.get_runs_for_job(job_id, limit=limit)
+
+
+@app.get("/api/runs")
+async def list_all_runs(limit: int = 100):
+    return await db.get_all_recent_runs(limit=limit)
 
 
 @app.get("/api/runs/{run_id}/log")
