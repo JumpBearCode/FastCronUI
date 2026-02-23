@@ -156,7 +156,7 @@ async def get_log(run_id: str):
 
 # ── API: File Browser ─────────────────────────────────────────
 
-BROWSE_ROOT = Path.home() / "Desktop" / "project"
+BROWSE_ROOT = Path.home()
 HIDDEN_DIRS = {".git", "node_modules", "__pycache__", ".tox", ".mypy_cache"}
 
 

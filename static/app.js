@@ -609,7 +609,7 @@ function renderBrowser(data) {
     const list = document.getElementById('browser-list');
 
     const parts = (data.path && data.path !== '.') ? data.path.split('/') : [];
-    let crumbHtml = `<span class="cursor-pointer hover:text-blue-600" onclick="loadBrowserDir('')">~/Desktop/project</span>`;
+    let crumbHtml = `<span class="cursor-pointer hover:text-blue-600" onclick="loadBrowserDir('')">~</span>`;
     let acc = '';
     for (const p of parts) {
         acc += (acc ? '/' : '') + p;
