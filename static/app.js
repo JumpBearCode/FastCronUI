@@ -351,7 +351,9 @@ function renderTaskInfo(job) {
     const el = document.getElementById('task-info');
     const freq = job.schedule.frequency;
     let schedDesc = freq.charAt(0).toUpperCase() + freq.slice(1);
-    if (freq === 'hourly' && job.schedule.interval) {
+    if (freq === 'custom' && job.schedule.cron_expression) {
+        schedDesc = `Custom: ${job.schedule.cron_expression}`;
+    } else if (freq === 'hourly' && job.schedule.interval) {
         schedDesc = `Every ${job.schedule.interval} minutes`;
     } else if (freq === 'daily') {
         schedDesc = `Daily at ${String(job.schedule.hour).padStart(2, '0')}:${String(job.schedule.minute).padStart(2, '0')}`;
@@ -384,7 +386,7 @@ function renderTaskInfo(job) {
             </div>
             <div>
                 <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Cron Expression</h4>
-                <p class="text-sm font-mono text-gray-800">${job.schedule.frequency === 'hourly' ? `*/${job.schedule.interval || 30} * * * *` : `${job.schedule.minute} ${job.schedule.hour} * * *`}</p>
+                <p class="text-sm font-mono text-gray-800">${job.schedule.frequency === 'custom' ? escHtml(job.schedule.cron_expression || '') : job.schedule.frequency === 'hourly' ? `*/${job.schedule.interval || 30} * * * *` : `${job.schedule.minute} ${job.schedule.hour} * * *`}</p>
             </div>
         </div>`;
 }
@@ -506,6 +508,7 @@ async function editJob(jobId) {
         if (job.schedule.interval) document.getElementById('f-interval').value = job.schedule.interval;
         if (job.schedule.day_of_week != null) document.getElementById('f-dow').value = job.schedule.day_of_week;
         if (job.schedule.day_of_month != null) document.getElementById('f-dom').value = job.schedule.day_of_month;
+        if (job.schedule.cron_expression) document.getElementById('f-cron').value = job.schedule.cron_expression;
 
         updateScheduleFields();
     } catch (err) {
@@ -517,10 +520,12 @@ async function editJob(jobId) {
 
 function updateScheduleFields() {
     const freq = document.getElementById('f-frequency').value;
+    const isCustom = freq === 'custom';
     document.getElementById('sched-hourly').classList.toggle('hidden', freq !== 'hourly');
-    document.getElementById('sched-time').classList.toggle('hidden', freq === 'hourly');
+    document.getElementById('sched-time').classList.toggle('hidden', freq === 'hourly' || isCustom);
     document.getElementById('sched-dow').classList.toggle('hidden', freq !== 'weekly');
     document.getElementById('sched-dom').classList.toggle('hidden', freq !== 'monthly');
+    document.getElementById('sched-custom').classList.toggle('hidden', !isCustom);
 }
 
 function resetForm() {
@@ -541,7 +546,9 @@ async function submitJob(e) {
     const freq = document.getElementById('f-frequency').value;
 
     const schedule = { frequency: freq };
-    if (freq === 'hourly') {
+    if (freq === 'custom') {
+        schedule.cron_expression = document.getElementById('f-cron').value.trim();
+    } else if (freq === 'hourly') {
         schedule.interval = parseInt(document.getElementById('f-interval').value);
     } else {
         schedule.hour = parseInt(document.getElementById('f-hour').value);

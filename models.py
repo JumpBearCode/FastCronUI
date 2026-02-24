@@ -12,6 +12,7 @@ class Frequency(str, Enum):
     daily = "daily"
     weekly = "weekly"
     monthly = "monthly"
+    custom = "custom"
 
 
 class Schedule(BaseModel):
@@ -21,8 +22,18 @@ class Schedule(BaseModel):
     day_of_week: Optional[int] = None  # 0=Sun .. 6=Sat
     day_of_month: Optional[int] = None  # 1-28
     interval: Optional[int] = None  # for hourly: 5/10/15/20/30
+    cron_expression: Optional[str] = None  # for custom: raw 5-field cron
 
     def to_cron(self) -> str:
+        if self.frequency == Frequency.custom:
+            if not self.cron_expression:
+                raise ValueError("cron_expression is required for custom frequency")
+            fields = self.cron_expression.strip().split()
+            if len(fields) != 5:
+                raise ValueError(
+                    f"cron_expression must have exactly 5 fields, got {len(fields)}"
+                )
+            return self.cron_expression.strip()
         if self.frequency == Frequency.hourly:
             interval = self.interval or 30
             return f"*/{interval} * * * *"

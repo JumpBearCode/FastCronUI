@@ -201,6 +201,7 @@
                         <option value="daily" selected>Daily</option>
                         <option value="weekly">Weekly</option>
                         <option value="monthly">Monthly</option>
+                        <option value="custom">Custom (Cron Expression)</option>
                     </select>
                 </div>
 
@@ -251,6 +252,14 @@
                     <label class="block text-sm font-medium text-gray-600 mb-1">Day of Month</label>
                     <input id="f-dom" type="number" min="1" max="28" value="1"
                         class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900">
+                </div>
+
+                <!-- Custom cron expression -->
+                <div id="sched-custom" class="hidden">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Cron Expression</label>
+                    <input id="f-cron" type="text" placeholder="0 8-20/3 * * *"
+                        class="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 font-mono focus:border-blue-500 focus:outline-none">
+                    <p class="text-xs text-gray-400 mt-1">5 fields: minute hour day-of-month month day-of-week</p>
                 </div>
 
                 <div>
